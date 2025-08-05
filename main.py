@@ -1,30 +1,38 @@
-import re
+import rumps
 from voice.listener import listen
 from voice.speaker import Speaker
 from brain.commands import handle
 
-def main():
-    speaker = Speaker()
-    greeting = "Greetings bruv. How can I help you today?"
-    speaker.speak(greeting)
-    speaker.wait_until_done()  # Wait for greeting to finish before listening
+class JarvisApp(rumps.App):
+    def __init__(self):
+        super().__init__("Jarvis")
+        self.speaker = Speaker()
 
-    while True:
-        print("Press ENTER when you want me to listen...")
-        input()
+        # Say intro greeting once on startup
+        self.speaker.speak("Greetings bruv. How can I help you today?")
+        self.speaker.wait_until_done()
+
+        # Create a menu with a Listen item
+        self.menu = ["Listen"]
+
+    @rumps.clicked("Listen")
+    def listen_command(self, _):
+        rumps.notification("Jarvis", "", "Listening now...")
         command = listen()
-
         if command:
-            # Remove Whisper timestamps like [00:00.000 --> 00:02.000]
+            # Clean Whisper timestamps if present
+            import re
             command = re.sub(r'\[.*?\]', '', command).strip()
-            print(f"Cleaned command: '{command}'")  # Optional: Debug print
-            handle(command, speaker)  # handle() handles speaking & waiting internally
-        else:
-            speaker.speak("Sorry, I didn't catch that.")
-            speaker.wait_until_done()
+            print(f"Cleaned command: '{command}'")
 
+            handle(command, self.speaker)
+        else:
+            self.speaker.speak("Sorry, I didn't catch that.")
+            self.speaker.wait_until_done()
+
+        # Optional: Quit if command is exit/bye
         if command and ("bye" in command.lower() or "exit" in command.lower()):
-            break
+            rumps.quit_application()
 
 if __name__ == "__main__":
-    main()
+    JarvisApp().run()
